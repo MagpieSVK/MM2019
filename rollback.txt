@@ -1,0 +1,417 @@
+  #include "gl_hd.h"
+  
+  LiquidCrystal lcd(19, 18, 17, 16, 15, 14);
+  
+  /*char V = 'V';
+  char A = 'A';
+  char W = 'W';
+  char typedc[] = "DC";
+  char typeac[] = "AC";
+  */
+  int range = 0;
+  int i = 0;
+  
+  double tA1 = 0;
+  double tA2 = 0;
+  double tV1 = 0;
+  double tV2 = 0;
+
+  const int BT1 = A7;
+  const int BT2 = A6;
+  
+  float ADCraw = 0.000;
+
+  int ACDC = 0; 
+  int time1=0;
+  int time2=0;
+  int time3=0;
+  boolean V = true;
+  boolean A = false;
+  boolean W = false;
+  boolean CL = true; 
+  float Voltage;
+  float Current;
+  float Wattage;
+  double fa;
+  double fv;
+    
+  void setup(){
+    Serial.begin(9600);
+    lcd.begin(16, 2);
+    pinMode(BT1, INPUT);
+    pinMode(BT2, INPUT);
+    pinMode(VCross, INPUT_PULLUP);
+    pinMode(ACross, INPUT_PULLUP);
+    pinMode(V40, OUTPUT);
+    pinMode(V400, OUTPUT);
+    pinMode(CS_V, OUTPUT);
+    pinMode(CS_A, OUTPUT);
+    pinMode(Vmeas, OUTPUT);
+    pinMode(Ameas, OUTPUT);
+    SPI.begin();
+    digitalWrite(CS_V, HIGH);
+    digitalWrite(CS_A, HIGH);
+    attachInterrupt(digitalPinToInterrupt(ACross), timerA1, RISING);
+    attachInterrupt(digitalPinToInterrupt(VCross), timerV1, RISING);
+    digitalWrite(V400, LOW);
+    digitalWrite(V40, LOW);
+    setdsp();
+    }
+  
+  void loop(){   
+  
+    int b1flag=0;
+    int b2flag=0;
+    int button2;
+    int button1;
+
+    time1=millis();
+    if((time1-time2)>=500){
+      voltage();
+      current();
+      Wattage=Voltage*Current;
+      time2=millis();
+      }
+    if((time1-time3)>=1000){
+      time3=millis();
+      refdsp();
+      }
+    
+    
+    button2 = analogRead(BT2);
+    button2 = map(button2,0,1023,0,10);
+    if(button2>0){
+      b2flag=1;
+      switch(button2){
+        case 1:
+        V=true;
+        A=false;
+        W=false;
+        break;
+        case 3:
+        V=false;
+        A=true;
+        W=false;
+        break;
+        case 10:
+        V=false;
+        A=false;
+        W=true;
+        break;
+        }
+        setdsp();  
+    }
+    while(b2flag==1){
+      button2 = analogRead(BT2);
+      button2 = map(button2,0,1023,0,10);
+      if(button2==0)b2flag=0;
+    } 
+    button1 = analogRead(BT1);
+    if(button1>300){
+      b1flag=1;
+      ACDC=!ACDC;
+      setdsp();
+    }
+    while(b1flag==1){
+      button1 = analogRead(BT1);
+      if(button1<300)b1flag=0; 
+    }
+
+  }
+
+  void setdsp(){
+    //sprintf(buffer, "%02d:%02d:%02d", hour, min, sec);
+    lcd.clear();
+    if(V==true){
+      lcd.setCursor(0, 0); lcd.print("----.---");
+      lcd.setCursor(11, 0); lcd.print("u");
+      lcd.setCursor(12, 0); lcd.print("V");
+      lcd.setCursor(13, 0); lcd.print("/");
+      lcd.setCursor(14, 0);
+      if(ACDC==0) lcd.print("DC");
+      else{ 
+        lcd.print("AC");
+        lcd.setCursor(0, 1);
+        lcd.print("---");
+        lcd.setCursor(14, 1);
+        lcd.print("Hz"); 
+      }
+      }
+    if(A==true){
+      lcd.setCursor(0, 0);  lcd.print("----.---");
+      lcd.setCursor(11, 0); lcd.print("u");
+      lcd.setCursor(12, 0); lcd.print("A");
+      lcd.setCursor(13, 0); lcd.print("/");
+      lcd.setCursor(14, 0);
+      if(ACDC==0) lcd.print("DC");
+      else{ 
+        lcd.print("AC");
+        lcd.setCursor(0, 1);
+        lcd.print("---");
+        lcd.setCursor(14, 1);
+        lcd.print("Hz"); 
+      }
+      }  
+    if(W==true){
+      if(ACDC==0){
+        lcd.setCursor(0, 0);  lcd.print("----.---");
+        lcd.setCursor(11, 0); lcd.print("u");
+        lcd.setCursor(12, 0); lcd.print("W");
+        lcd.setCursor(13, 0); lcd.print("/");
+        lcd.setCursor(14, 0); lcd.print("DC");
+      }
+      else{ 
+        lcd.setCursor(0, 0);  lcd.print("---.--");
+        lcd.setCursor(6, 0); lcd.print("u");
+        lcd.setCursor(7, 0); lcd.print("VA");
+        lcd.setCursor(12, 0); lcd.print("---");
+        lcd.setCursor(0, 1); lcd.print("---");
+        lcd.setCursor(5, 1); lcd.print("u");
+        lcd.setCursor(6, 1); lcd.print("W");
+        lcd.setCursor(7, 1); lcd.print("---");
+        lcd.setCursor(11, 1); lcd.print("u");  
+        lcd.setCursor(12, 1); lcd.print("VAr");                 
+      }
+      }   
+     }
+     
+  void refdsp(){
+  //Serial.println(Voltage, 9); 
+   // Serial.println(Current);
+   // Serial.println(fv);
+   if(V==true){ 
+    if(abs(Voltage)>=1){
+       lcd.setCursor(11, 0); lcd.print(" ");
+      // Serial.println("V");
+    }
+    else{
+    if((abs(Voltage)<1)&&(abs(Voltage)>=0.001)){
+       lcd.setCursor(11, 0); lcd.print("m");
+       //Serial.println("mV");
+       Voltage=Voltage*1000;
+    }
+    else{
+       lcd.setCursor(11, 0); lcd.print("u");
+       Voltage=Voltage*1000;
+       //Serial.println("uV");
+    }
+    }    
+
+
+          
+    char napatie[8];  
+    dtostrf(Voltage, 8, 3, napatie);
+    lcd.setCursor(0, 0); lcd.print(napatie);      
+    }
+    
+    
+    if(A==true){
+    if(abs(Current)>=1){
+       lcd.setCursor(11, 0); lcd.print(" ");
+    }
+    else{
+    if((abs(Current)<1)&&(abs(Current)>=0.001)){
+       lcd.setCursor(11, 0); lcd.print("m");
+       Current=Current*1000;
+    }
+    else{
+       lcd.setCursor(11, 0); lcd.print("u");
+       Current=Current*1000;
+    }
+    }    
+         
+    char prud[8];  
+    dtostrf(Current, 8, 3, prud);
+    lcd.setCursor(0, 0); lcd.print(prud);      
+    }
+
+    if((W==false)&&(ACDC==1)){
+    char frqvlt[3];  
+    dtostrf(fv, 3, 0, frqvlt);  
+    lcd.setCursor(0, 1);
+    lcd.print(frqvlt); 
+    }
+
+    if((W==true)&&(ACDC==0)){
+    char wattjs[3];
+    if(abs(Wattage)>=1){
+       lcd.setCursor(11, 0); lcd.print(" ");
+      // Serial.println("V");
+    }
+    else{
+    if((abs(Wattage)<1)&&(abs(Wattage)>=0.001)){
+       lcd.setCursor(11, 0); lcd.print("m");
+       //Serial.println("mV");
+       Wattage=Wattage*1000;
+    }
+    else{
+       lcd.setCursor(11, 0); lcd.print("u");
+       Wattage=Wattage*1000;
+       //Serial.println("uV");
+    }
+    }  
+    dtostrf(Wattage, 8, 3, wattjs);  
+    lcd.setCursor(0, 0);
+    lcd.print(wattjs); 
+    }        
+    
+    
+    }
+  
+  int_least32_t ReadADC(int CS) {
+
+    uint8_t byte_0, byte_1, byte_2, byte_3;
+    int_least32_t ADCcode;
+    boolean ADCsign;
+
+    /* Begin SPI communication */
+    SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE1));
+    /* Enable given chip */
+    digitalWrite(CS, LOW);
+    /* Transfer 4 bytes - byte by byte */
+    byte_0 = SPI.transfer(0);
+    byte_1 = SPI.transfer(0);
+    byte_2 = SPI.transfer(0);
+    byte_3 = SPI.transfer(0);
+    /* Disable given chip */
+    digitalWrite(CS, HIGH);
+    /* End SPI communication */
+    SPI.endTransaction();
+  
+    /* Mask and find sign byte */
+    ADCsign = (byte_0 & B00100000) >> 5; // 1>+ 0>-
+  
+    byte_3 = byte_3 & B11100000;
+    byte_0 = byte_0 & B00011111;
+  
+    /* Concacenate bytes into QWORD*/
+    ADCcode = (long) byte_3 >> 5;
+    ADCcode = ADCcode + ((long) byte_2 << 3);
+    ADCcode = ADCcode + ((long) byte_1 << 11);
+    ADCcode = ADCcode + ((long) byte_0 << 19);
+  
+    if (ADCsign)
+    {
+      ADCraw = (float)ADCcode; // positive
+      ADCcode = ADCcode;
+    }
+    else
+    {
+      ADCcode = ADCcode - 16777216;
+    }
+  
+    return ADCcode;
+  }
+
+  
+  void voltage() {
+    long ADCvalue;
+    float RangeV;
+    digitalWrite(Vmeas, ACDC);
+    ADCvalue = ReadADC(9);
+    
+    if (range == 0) {
+      Voltage = (float)ADCvalue * Vref* SlopeV04;
+      Voltage = (Voltage-OffsetV04)/calSlopeV04;
+    }
+    if (range == 1) {
+      Voltage = (float)ADCvalue * Vref * SlopeV40;
+      Voltage = (Voltage-OffsetV40)/calSlopeV40;
+    }
+    if (range == 2) {
+      Voltage = (float)ADCvalue * Vref * SlopeV400;
+      Voltage = (Voltage-OffsetV400)/calSlopeV400; 
+    }
+    RangeV = abs(Voltage);
+    if ((RangeV > 0.400) && (range == 0)) {
+      range = 1;
+    }
+    else if ((RangeV > 40.00) && (range == 1)) {
+      range = 2;
+    }
+    else if ((RangeV < 40.00) && (range == 2)) {
+      range = 1;
+    }
+    else if ((RangeV < 0.400) && (range == 1)) {
+      range = 0;
+    }
+    Range(range);
+  }
+  
+  
+  void Range(int value) {
+    if (value == 1) {
+      digitalWrite(V400, LOW);
+      digitalWrite(V40, HIGH);
+    }
+    if (value == 2) {
+      digitalWrite(V400, HIGH);
+      digitalWrite(V40, LOW);
+    }
+    if (value == 0) {
+      digitalWrite(V400, LOW);
+      digitalWrite(V40, LOW);
+    }
+  }
+
+  
+  void current() {
+    long ADCvalue;
+    digitalWrite(Ameas, (!ACDC));
+    ADCvalue = ReadADC(10);
+    
+    if(ACDC==0)Current = (float)ADCvalue * Vref * SlopeA4;
+    else{
+      ADCvalue = (8388608)-abs(ADCvalue);  
+      Current = (float)ADCvalue * Vref * SlopeA4;
+      }
+  }
+
+  
+  void Vfrequency(){
+    double t;
+    t = abs(tV1 - tV2);
+    fv = 1 / (t/1000000);
+  }
+  
+  void Afrequency(){
+    double t;
+    t = abs(tA1 - tA2);
+    fa = 1 / (t/1000000);
+  }
+  
+  float phase(){
+    float p;
+    p = tA1 - tV1;
+    return p;
+  }
+  
+  void timerA1() {
+    if(i==0){
+    tA1 = micros();
+    i++;
+    }
+    else{
+    tA2=micros();
+    i=0;
+    Afrequency();    
+    }
+  }
+  
+  
+  void timerV1() {
+    if(i==0){
+    tV1 = micros();
+    i++;
+    }
+    else{
+    tV2=micros();
+    i=0;
+    Vfrequency();
+    }
+  }
+  
+
+
+  
+  
