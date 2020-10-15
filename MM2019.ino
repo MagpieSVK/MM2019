@@ -2,9 +2,10 @@
 
 #include "gl_hd.h"
 
-static uint8_t timer10x;                  ///< 100ms timer, when this reaches 10 100ms passed
-static uint8_t UnsychronisedInteruptCnt;
-static uint8_t FatalErr;
+uint8_t timer10x;                       ///< 10 x FSyncRefreshTime timer
+uint8_t timer100x;                      ///< 100 x FSyncRefreshTime timer
+uint8_t UnsychronisedInteruptCnt;       ///< Unsychronised interupt counter
+uint8_t FatalErr;                       ///< Fatal Error flag
 
 
 /**
@@ -18,9 +19,10 @@ static uint8_t FatalErr;
 void setup(void) {
   // Internal Interupts inicialization
   InicMeassure();
-
+  InicDisplay();
+  InitSerial();
   Timer1.initialize(FSyncRefreshTime);
-
+  delay(StartUpDelay);                      ///< We will delay setup to give LCD and other periferies time to initialize 
 
 }
 
@@ -83,13 +85,25 @@ void FSync(void) {
   else {
     RefreshCurrent();
   }
-  // functions which run every 100ms on 10 run and reset of 100ms timer
-  if (++timer10x == 10) {
+  if(timer10x == 8) {
+    ReadSerial();
+  }
+  // functions which run every 10 x FSyncRefreshTime on 9 run of FSync
+  if(timer10x == 9) {
+    SetDisplay();
+  }
+  // functions which run every 100 x FSyncRefreshTime on 10 run of FSync and reset of 10x and 100x timers
+  // Dont run any 10x functions from here since 100x functions run from here
+  if(++timer10x == 10) {
     timer10x = 0;
+    if(++timer100x == 10) {
+      timer100x = 0;
+    }
   }
   // Interupt finished - no code after this
   RunTime = Timer1.read();
-  //DiagCaptureTime();
+  CaptureDiagTime(timer10x, RunTime);
+  
   Sync = false;
   return;
 
@@ -107,6 +121,8 @@ void FSync(void) {
  * @todo finish this function
  */
 void FAsync(void) {
-
+   //RefreshDisplay();
+   WriteSerial();
+   ComputeDiagTime();
   return;
 }

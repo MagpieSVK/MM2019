@@ -10,9 +10,22 @@
 
 /** Module includes */
 #include "meassure.h"
-#include "diag.h"
+#include "display.h"
+#include "remote.h"
+#include "control.h"
+
+/** Global variables */
+extern uint8_t timer10x;                       ///< 10 x FSyncRefreshTime timer
+extern uint8_t timer100x;                      ///< 100 x FSyncRefreshTime timer
+extern uint8_t UnsychronisedInteruptCnt;       ///< Unsychronised interupt counter
+extern uint8_t FatalErr;                       ///< Fatal Error flag
 
 /** Global definitions */
+#define FirmwareVersion "0.0.1a"
+#define CompileTime __TIME__
+#define CompileDate __DATE__
+
+#define StartUpDelay 2000                       ///< Delay at startup in miliseconds
 
 #define us_in_s 1000000
 #define ms_in_s 1000

@@ -1,0 +1,2 @@
+export/
+$ echo rollback.txt >> .gitignore $ git rm --cached rollback.txt rm 'rollback.txt' $ git commit -m "Start ignoring rollback.txt"

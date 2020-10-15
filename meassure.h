@@ -33,6 +33,9 @@ extern void MeassuredQTypeSelect(bool ACDC);
 #define VoltageADC_CS 9         ///< IO connected to CS of ADC for Voltage reading
 #define CurrentADC_CS 10        ///< IO connected to CS of ADC for Current reading
 
+#define CurrentACDC_Sel 8       ///< IO to select between AC and DC meassuring of current
+#define VoltageACDC_Sel 7       ///< IO to select between AC and DC meassuring of voltage
+
 #define AC true                 ///< Definition of AC for Meassure type selection
 #define DC false                ///< Definition of DC for Meassure type selection
 
@@ -59,10 +62,6 @@ extern void MeassuredQTypeSelect(bool ACDC);
 #define CurrentShuntValue 0.100            ///< Move to EEPROM
 #define GainOfVoltageAmplifier 10.09  
 #define GainOfCurrentAmplifier 5.02
-  
-  
-#define Ameas 8
-#define Vmeas 7
   
 #define BT1 A7
 #define BT2 A6

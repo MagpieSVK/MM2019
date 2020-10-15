@@ -270,8 +270,8 @@ bool ReturnCurrent(float *pCurrent) {
 
 void MeassuredQTypeSelect(bool ACDC) {
 
-  digitalWrite(Vmeas, ACDC);
-  digitalWrite(Ameas, !ACDC);
+  digitalWrite(VoltageACDC_Sel, ACDC);
+  digitalWrite(CurrentACDC_Sel, !ACDC);
   QType = ACDC;
   return;
 }
@@ -283,8 +283,8 @@ void InicMeassure(void) {
   pinMode(V400, OUTPUT);
   pinMode(VoltageADC_CS, OUTPUT);
   pinMode(CurrentADC_CS, OUTPUT);
-  pinMode(Vmeas, OUTPUT);
-  pinMode(Ameas, OUTPUT);
+  pinMode(VoltageACDC_Sel, OUTPUT);
+  pinMode(CurrentACDC_Sel, OUTPUT);
   pinMode(VCross, INPUT_PULLUP);
   pinMode(ACross, INPUT_PULLUP);
   // Set IO
@@ -292,6 +292,8 @@ void InicMeassure(void) {
   digitalWrite(V40, LOW);
   digitalWrite(VoltageADC_CS, HIGH);
   digitalWrite(CurrentADC_CS, HIGH);
+  digitalWrite(VoltageACDC_Sel, DC);
+  digitalWrite(CurrentACDC_Sel, (!DC));
   // Initialize variables
   Voltage = 0.0;
   Current = 0.0;
